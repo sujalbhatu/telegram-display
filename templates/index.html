@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenForge | Live Interactive Display</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Experience the live interactive display powered by OpenForge. Join the broadcast and see real-time transmissions on the screen.">
+    <meta name="keywords" content="live display, openforge, interactive, telegram integration, real-time messaging">
+    <meta name="author" content="OpenForge">
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://openforge.online/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://openforge.online/">
+    <meta property="og:title" content="OpenForge | Live Interactive Display">
+    <meta property="og:description" content="Experience the live interactive display powered by OpenForge. Join the broadcast and see real-time transmissions on the screen.">
+    <meta property="og:image" content="https://openforge.online/static/og-image.jpg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://openforge.online/">
+    <meta property="twitter:title" content="OpenForge | Live Interactive Display">
+    <meta property="twitter:description" content="Experience the live interactive display powered by OpenForge. Join the broadcast and see real-time transmissions on the screen.">
+    <meta property="twitter:image" content="https://openforge.online/static/og-image.jpg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <div class="background">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="glow glow-3"></div>
+    </div>
+
+    <div class="container">
+
+        <header class="header">
+            <div class="pulse-dot"></div>
+            <h1 class="header-text">LIVE</h1>
+        </header>
+
+        <main class="display" id="display">
+            <div class="welcome" id="welcome">
+                <p class="welcome-emoji">👽</p>
+                <p class="welcome-text">Awaiting transmission...</p>
+                <p class="welcome-sub"></p>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <span class="footer-text" id="status">Connected</span>
+            <span class="message-count" id="count">0 messages</span>
+        </footer>
+
+    </div>
+
+    <script>
+        const display = document.getElementById('display');
+        const welcome = document.getElementById('welcome');
+        const status = document.getElementById('status');
+        const count = document.getElementById('count');
+        let messageCount = {{ messages | length }};
+
+        // Load existing messages
+        {% for msg in messages %}
+        addMessage({{ msg | tojson }}, false);
+        {% endfor %}
+
+        if (messageCount > 0 && welcome) {
+            welcome.style.display = 'none';
+        }
+
+        // Connect to SSE stream
+        function connect() {
+            const source = new EventSource('/stream');
+
+            source.onmessage = function(event) {
+                const payload = JSON.parse(event.data);
+
+                if (payload.type === 'clear') {
+                    clearScreen();
+                } else if (payload.type === 'message') {
+                    addMessage(payload.data, true);
+                }
+            };
+
+            source.onopen = function() {
+                status.textContent = 'Connected';
+                status.classList.remove('disconnected');
+                status.classList.add('connected');
+            };
+
+            source.onerror = function() {
+                status.textContent = 'Reconnecting...';
+                status.classList.remove('connected');
+                status.classList.add('disconnected');
+                source.close();
+                setTimeout(connect, 3000);
+            };
+        }
+
+        function addMessage(data, animate) {
+            if (welcome) {
+                welcome.style.display = 'none';
+            }
+
+            const el = document.createElement('div');
+            el.className = 'message' + (animate ? ' message-enter' : '');
+
+            const textEl = document.createElement('div');
+            textEl.className = 'message-text';
+            textEl.textContent = data.text;
+
+            const metaEl = document.createElement('div');
+            metaEl.className = 'message-meta';
+            metaEl.textContent = data.sender + ' · ' + data.time + ' UTC';
+
+            el.appendChild(textEl);
+            // PRANK MODE: Temporarily hiding sender info
+            // el.appendChild(metaEl);
+            display.appendChild(el);
+
+            messageCount++;
+            count.textContent = messageCount + (messageCount === 1 ? ' message' : ' messages');
+
+            // Auto scroll to bottom
+            display.scrollTop = display.scrollHeight;
+
+            // Trigger animation
+            if (animate) {
+                requestAnimationFrame(() => {
+                    el.classList.add('message-visible');
+                });
+            } else {
+                el.classList.add('message-visible');
+            }
+        }
+
+        function clearScreen() {
+            const msgs = display.querySelectorAll('.message');
+            msgs.forEach(m => m.remove());
+
+            if (welcome) {
+                welcome.style.display = 'flex';
+            }
+
+            messageCount = 0;
+            count.textContent = '0 messages';
+        }
+
+        connect();
+    </script>
+
+</body>
+</html>

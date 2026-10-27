@@ -1,0 +1,17 @@
+[Unit]
+Description=Telegram Live Display
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/ubuntu/telegram-display
+ExecStart=/home/ubuntu/telegram-display/venv/bin/python3 app.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
